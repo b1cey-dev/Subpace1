@@ -2,56 +2,62 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
-import { getUserRole } from "@/lib/auth";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from 'recharts';
 
-interface AnalyticsData {
+interface Analytics {
   totalUsers: number;
   activeUsers: number;
+  newSignups: number;
   premiumUsers: number;
-  newUsers: number;
-  userActivity: {
-    date: string;
-    activeUsers: number;
-    newSignups: number;
-  }[];
+  averageSessionTime: string;
+  topFeatures: Array<{
+    name: string;
+    usage: number;
+  }>;
+  userGrowth: Array<{
+    month: string;
+    users: number;
+  }>;
 }
 
-export default function AnalyticsDashboard() {
+export default function AnalyticsPage() {
   const { user, isLoaded } = useUser();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [analytics, setAnalytics] = useState<AnalyticsData>({
-    totalUsers: 0,
-    activeUsers: 0,
-    premiumUsers: 0,
-    newUsers: 0,
-    userActivity: []
-  });
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
 
   useEffect(() => {
-    const checkAdmin = async () => {
+    const fetchData = async () => {
       if (user) {
-        const role = await getUserRole();
-        setIsAdmin(role === 'admin');
-        if (role === 'admin') {
-          // In a real app, fetch analytics from your API
-          setAnalytics({
-            totalUsers: 1234,
-            activeUsers: 789,
-            premiumUsers: 234,
-            newUsers: 56,
-            userActivity: [
-              { date: '2024-03-01', activeUsers: 650, newSignups: 45 },
-              { date: '2024-03-02', activeUsers: 720, newSignups: 52 },
-              { date: '2024-03-03', activeUsers: 789, newSignups: 56 },
-            ]
-          });
+        try {
+          const [adminRes, analyticsRes] = await Promise.all([
+            fetch('/api/admin/check'),
+            fetch('/api/admin/analytics')
+          ]);
+          
+          const adminData = await adminRes.json();
+          setIsAdmin(adminData.isAdmin);
+          
+          if (adminData.isAdmin) {
+            const analyticsData = await analyticsRes.json();
+            setAnalytics(analyticsData.analytics);
+          }
+        } catch (error) {
+          console.error('Error fetching data:', error);
         }
       }
       setLoading(false);
     };
 
-    checkAdmin();
+    fetchData();
   }, [user]);
 
   if (!isLoaded || loading) {
@@ -73,11 +79,15 @@ export default function AnalyticsDashboard() {
     );
   }
 
+  if (!analytics) {
+    return null;
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2">Analytics Dashboard</h1>
-        <p className="text-gray-600">Monitor user activity and growth</p>
+        <p className="text-gray-600">Track user engagement and platform metrics</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -90,48 +100,49 @@ export default function AnalyticsDashboard() {
           <p className="mt-2 text-3xl font-semibold text-gray-900">{analytics.activeUsers}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-sm font-medium text-gray-500">New Signups</h3>
+          <p className="mt-2 text-3xl font-semibold text-gray-900">{analytics.newSignups}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-sm font-medium text-gray-500">Premium Users</h3>
           <p className="mt-2 text-3xl font-semibold text-gray-900">{analytics.premiumUsers}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-sm font-medium text-gray-500">New Users (24h)</h3>
-          <p className="mt-2 text-3xl font-semibold text-gray-900">{analytics.newUsers}</p>
-        </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-medium mb-4">User Activity</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Active Users
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  New Signups
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {analytics.userActivity.map((activity) => (
-                <tr key={activity.date}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {activity.date}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {activity.activeUsers}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {activity.newSignups}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">User Growth</h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={analytics.userGrowth}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="users" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Top Features</h3>
+          <div className="space-y-4">
+            {analytics.topFeatures.map((feature) => (
+              <div key={feature.name}>
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm font-medium text-gray-700">{feature.name}</span>
+                  <span className="text-sm font-medium text-gray-700">{feature.usage}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-purple-600 h-2 rounded-full"
+                    style={{ width: `${feature.usage}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
