@@ -2,7 +2,6 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
-import { getUserRole } from "@/lib/auth";
 
 interface AuditLog {
   id: string;
@@ -24,9 +23,10 @@ export default function AuditLogPage() {
   useEffect(() => {
     const checkAdmin = async () => {
       if (user) {
-        const role = await getUserRole();
-        setIsAdmin(role === 'admin');
-        if (role === 'admin') {
+        const res = await fetch('/api/admin/check');
+        const data = await res.json();
+        setIsAdmin(data.isAdmin);
+        if (data.isAdmin) {
           // In a real app, fetch audit logs from your API
           setLogs([
             {
