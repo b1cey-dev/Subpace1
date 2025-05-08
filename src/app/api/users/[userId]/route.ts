@@ -8,9 +8,15 @@ const userRoles: Record<string, string> = {
   "user_456": "premium",
 };
 
+type RouteContext = {
+  params: {
+    userId: string;
+  };
+};
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  context: RouteContext
 ) {
   const session = await auth();
 
@@ -19,14 +25,14 @@ export async function GET(
   }
 
   // In a real application, you would fetch this from your database
-  const role = userRoles[params.userId] || "member";
+  const role = userRoles[context.params.userId] || "member";
 
   return NextResponse.json({ role });
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  context: RouteContext
 ) {
   const session = await auth();
 
@@ -48,7 +54,7 @@ export async function PATCH(
   }
 
   // In a real application, you would update this in your database
-  userRoles[params.userId] = role;
+  userRoles[context.params.userId] = role;
 
   return NextResponse.json({ role });
 } 
