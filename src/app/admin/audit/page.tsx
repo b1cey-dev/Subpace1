@@ -21,48 +21,29 @@ export default function AuditLogPage() {
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    const checkAdmin = async () => {
+    const fetchData = async () => {
       if (user) {
-        const res = await fetch('/api/admin/check');
-        const data = await res.json();
-        setIsAdmin(data.isAdmin);
-        if (data.isAdmin) {
-          // In a real app, fetch audit logs from your API
-          setLogs([
-            {
-              id: '1',
-              timestamp: '2024-03-03T10:00:00Z',
-              action: 'USER_ROLE_CHANGED',
-              userId: 'user_123',
-              userEmail: 'admin@example.com',
-              details: 'Changed role from member to premium',
-              ipAddress: '192.168.1.1'
-            },
-            {
-              id: '2',
-              timestamp: '2024-03-03T09:30:00Z',
-              action: 'USER_DELETED',
-              userId: 'user_456',
-              userEmail: 'user@example.com',
-              details: 'Account deleted',
-              ipAddress: '192.168.1.2'
-            },
-            {
-              id: '3',
-              timestamp: '2024-03-03T09:00:00Z',
-              action: 'SETTINGS_UPDATED',
-              userId: 'user_789',
-              userEmail: 'premium@example.com',
-              details: 'Updated notification preferences',
-              ipAddress: '192.168.1.3'
-            }
+        try {
+          const [adminRes, logsRes] = await Promise.all([
+            fetch('/api/admin/check'),
+            fetch('/api/admin/audit')
           ]);
+          
+          const adminData = await adminRes.json();
+          setIsAdmin(adminData.isAdmin);
+          
+          if (adminData.isAdmin) {
+            const logsData = await logsRes.json();
+            setLogs(logsData.logs);
+          }
+        } catch (error) {
+          console.error('Error fetching data:', error);
         }
       }
       setLoading(false);
     };
 
-    checkAdmin();
+    fetchData();
   }, [user]);
 
   const filteredLogs = logs.filter(log => {
