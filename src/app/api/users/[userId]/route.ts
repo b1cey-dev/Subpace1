@@ -8,15 +8,9 @@ const userRoles: Record<string, string> = {
   "user_456": "premium",
 };
 
-type RouteContext = {
-  params: {
-    userId: string;
-  };
-};
-
 export async function GET(
   request: NextRequest,
-  context: RouteContext
+  context: { params: { userId: string } }
 ) {
   const session = await auth();
 
@@ -32,7 +26,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  context: RouteContext
+  context: { params: { userId: string } }
 ) {
   const session = await auth();
 
