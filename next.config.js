@@ -2,7 +2,9 @@
 const nextConfig = {
   experimental: {
     // Disable Turbopack for now to avoid route conflicts
-    turbo: false
+    turbo: {
+      enabled: false
+    }
   }
 }
 
