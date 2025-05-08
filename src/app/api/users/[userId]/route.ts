@@ -10,7 +10,7 @@ const userRoles: Record<string, string> = {
 
 export async function GET(
   request: NextRequest,
-  context: any
+  context
 ) {
   const session = await auth();
 
@@ -26,7 +26,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  context: any
+  context
 ) {
   const session = await auth();
 
