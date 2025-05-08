@@ -1,5 +1,5 @@
-import { auth } from "@clerk/nextjs";
-import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
 
 // This is a mock database. In a real application, you would use a proper database
 const userRoles: Record<string, string> = {
@@ -9,12 +9,12 @@ const userRoles: Record<string, string> = {
 };
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { userId: string } }
 ) {
-  const { userId } = auth();
+  const session = await auth();
 
-  if (!userId) {
+  if (!session?.userId) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -25,17 +25,17 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { userId: string } }
 ) {
-  const { userId } = auth();
+  const session = await auth();
 
-  if (!userId) {
+  if (!session?.userId) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
   // Check if the user is an admin
-  const isAdmin = userRoles[userId] === "admin";
+  const isAdmin = userRoles[session.userId] === "admin";
   if (!isAdmin) {
     return new NextResponse("Forbidden", { status: 403 });
   }
