@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id
+  stripeCustomerId  String?   @unique
+  stripeConnectId   String?   @unique
+  subscriptionId    String?   @unique
+  subscriptionStatus String?
+  priceId          String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model StripeEvent {
+  id               String   @id @default(cuid())
+  stripeEventId    String   @unique
+  type             String
+  object           Json
+  createdAt        DateTime @default(now())
+
+  @@map("stripe_events")
+}
+
+model StripeConnect {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  accountId        String   @unique
+  chargesEnabled   Boolean  @default(false)
+  payoutsEnabled   Boolean  @default(false)
+  detailsSubmitted Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("stripe_connect")
+}
+
+model StripePrice {
+  id          String   @id
+  productId   String
+  active      Boolean  @default(true)
+  currency    String   @default("gbp")
+  type        String   // 'one_time' or 'recurring'
+  unitAmount  Int      // Amount in pence (e.g., 2999 for £29.99)
+  interval    String?  // 'month' or 'year' for recurring prices
+  name        String   // Product name
+  description String?  // Product description
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("stripe_prices")
+} 
