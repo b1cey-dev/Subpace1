@@ -22,7 +22,16 @@ const nextConfig = {
         tls: false,
       };
     }
+    // Add module resolution aliases
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': require('path').join(__dirname, 'src'),
+    };
     return config;
+  },
+  images: {
+    domains: ['localhost'],
+    unoptimized: process.env.NODE_ENV === 'development',
   }
 }
 
