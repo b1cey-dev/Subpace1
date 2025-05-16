@@ -1,22 +1,33 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { StripeProvider } from "@/components/providers/StripeProvider";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
   title: "Subpace - Elevate Your Community",
   description: "Transform your community into a thriving business ecosystem. Automate, monetize, and analyze with unparalleled precision.",
 };
+
+function Providers({ children }: { children: React.ReactNode }) {
+  const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
+  if (!stripeKey) {
+    console.warn('Stripe publishable key is missing. Stripe functionality will be disabled.');
+    return <>{children}</>;
+  }
+
+  return (
+    <StripeProvider publishableKey={stripeKey}>
+      {children}
+    </StripeProvider>
+  );
+}
 
 export default function RootLayout({
   children,
@@ -35,10 +46,10 @@ export default function RootLayout({
             referrerPolicy="no-referrer"
           />
         </head>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-          <main>{children}</main>
+        <body className={`${inter.variable} font-sans antialiased`}>
+          <Providers>
+            <main>{children}</main>
+          </Providers>
         </body>
       </html>
     </ClerkProvider>

@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useUser, useAuth } from "@clerk/nextjs";
+import { PaymentMethodModal } from '@/components/PaymentMethodModal';
+import { StripeElementsProvider } from '@/components/StripeElements';
 
 export default function SettingsPage() {
   const { user, isLoaded } = useUser();
@@ -27,6 +29,8 @@ export default function SettingsPage() {
   const [usernameAvailable, setUsernameAvailable] = useState<null | boolean>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameMessage, setUsernameMessage] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [setupIntentSecret, setSetupIntentSecret] = useState<string | null>(null);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -622,11 +626,58 @@ export default function SettingsPage() {
                 </div>
                 
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#232229]">
-                  <button className="text-sm text-gray-400 hover:text-white">
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/billing/subscription', {
+                          method: 'DELETE',
+                          headers: { 'Content-Type': 'application/json' },
+                        });
+                        
+                        if (!response.ok) {
+                          const errorData = await response.json();
+                          throw new Error(errorData.error || 'Failed to cancel subscription');
+                        }
+                        
+                        const data = await response.json();
+                        // Show success message before reload
+                        alert('Subscription cancelled successfully');
+                        window.location.reload();
+                      } catch (error: any) {
+                        console.error('Error:', error);
+                        alert(error.message || 'An error occurred while cancelling the subscription');
+                      }
+                    }}
+                    className="text-sm text-red-400 hover:text-red-300"
+                  >
                     Cancel Subscription
                   </button>
-                  <button className="bg-[#232229] text-sm py-2 px-4 rounded-md hover:bg-[#2a2a2c]">
-                    Change Plan
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/billing/setup-intent', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                        });
+                        
+                        if (!response.ok) {
+                          const errorData = await response.json();
+                          throw new Error(errorData.details || 'Failed to create setup intent');
+                        }
+                        
+                        const { clientSecret } = await response.json();
+                        setSetupIntentSecret(clientSecret);
+                        setShowPaymentModal(true);
+                      } catch (error: any) {
+                        console.error('Error:', error);
+                        // You might want to add a toast notification here
+                        alert(error.message || 'An error occurred while setting up payment');
+                      }
+                    }}
+                    className="text-sm text-purple-400 hover:text-purple-300 flex items-center"
+                  >
+                    <i className="fas fa-plus-circle mr-2"></i>
+                    Add Payment Method
                   </button>
                 </div>
               </div>
@@ -642,48 +693,25 @@ export default function SettingsPage() {
                     <span className="text-sm">Visa ending in 4242</span>
                     <div className="text-xs text-gray-400">Expires 08/2025</div>
                   </div>
-                  <button className="text-xs text-gray-400 hover:text-white">
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/billing/setup-intent', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                        });
+                        if (!response.ok) throw new Error('Failed to create setup intent');
+                        const { clientSecret } = await response.json();
+                        // Open Stripe Elements modal with clientSecret
+                        // You'll need to implement the Stripe Elements UI here
+                      } catch (error) {
+                        console.error('Error:', error);
+                      }
+                    }}
+                    className="text-xs text-gray-400 hover:text-white"
+                  >
                     Edit
                   </button>
-                </div>
-                
-                <button className="text-sm text-purple-400 hover:text-purple-300 flex items-center">
-                  <i className="fas fa-plus-circle mr-2"></i>
-                  Add Payment Method
-                </button>
-              </div>
-              
-              <div>
-                <h3 className="text-base font-medium mb-4">Billing History</h3>
-                <div className="overflow-hidden rounded-lg border border-[#232229]">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-[#0d0d0f]">
-                        <th className="text-left p-3 text-xs font-medium text-gray-400">DATE</th>
-                        <th className="text-left p-3 text-xs font-medium text-gray-400">DESCRIPTION</th>
-                        <th className="text-right p-3 text-xs font-medium text-gray-400">AMOUNT</th>
-                        <th className="text-right p-3 text-xs font-medium text-gray-400">INVOICE</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { date: 'May 15, 2023', description: 'Pro Plan (Monthly)', amount: '$29.00', status: 'Paid' },
-                        { date: 'Apr 15, 2023', description: 'Pro Plan (Monthly)', amount: '$29.00', status: 'Paid' },
-                        { date: 'Mar 15, 2023', description: 'Pro Plan (Monthly)', amount: '$29.00', status: 'Paid' },
-                      ].map((invoice, index) => (
-                        <tr key={index} className="border-t border-[#232229]">
-                          <td className="p-3 text-sm">{invoice.date}</td>
-                          <td className="p-3 text-sm">{invoice.description}</td>
-                          <td className="p-3 text-sm text-right">{invoice.amount}</td>
-                          <td className="p-3 text-sm text-right">
-                            <button className="text-purple-400 hover:text-purple-300">
-                              <i className="fas fa-download"></i>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
               </div>
             </div>
@@ -709,6 +737,23 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Add the Stripe Elements Modal */}
+      {showPaymentModal && setupIntentSecret && (
+        <StripeElementsProvider clientSecret={setupIntentSecret}>
+          <PaymentMethodModal
+            onClose={() => {
+              setShowPaymentModal(false);
+              setSetupIntentSecret(null);
+            }}
+            onSuccess={() => {
+              setShowPaymentModal(false);
+              setSetupIntentSecret(null);
+              window.location.reload();
+            }}
+          />
+        </StripeElementsProvider>
+      )}
     </main>
   );
 } 
